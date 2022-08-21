@@ -1,0 +1,30 @@
+cython
+pyyaml==5.1
+jupyter
+opencv-python
+#-U fvcore
+nbformat==4.4
+scikit-image 
+matplotlib 
+imageio
+black 
+isort 
+flake8 
+flake8-bugbear 
+flake8-comprehensions
+-e .
+scikit-learn==0.22.2
+pandas
+h5py
+structlog
+pytorch-lightning==0.8.5
+transformers
+datasets
+onnx
+baal
+xmltodict
+seaborn
+statsmodels
+cerberus
+darwin-py
+#-U 'git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI'
