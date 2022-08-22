@@ -26,8 +26,8 @@ pretrained_weights: PascalVOC-Detection/faster_rcnn_R_50_C4.yaml
 cuda_visible_devices: '0'
 # classes: ['broccoli', 'damaged', 'matured', 'cateye', 'headrot']
 classes: ['person', 'bird', 'cat', 'cow', 'dog', 'horse', 'sheep', 'aeroplane', 
-          'bicycle', 'boat', 'bus', 'car', 'motorbike', 'train', 'bottle', 'chair', 'dining table',
-          'potted plant', 'sofa', 'tv']
+          'bicycle', 'boat', 'bus', 'car', 'motorbike', 'train', 'bottle', 'chair', 'diningtable',
+          'pottedplant', 'sofa', 'tvmonitor']
 transfer_learning_on_previous_models: True
 learning_rate: 0.01
 warmup_iterations: 500
@@ -46,8 +46,8 @@ num_workers: 2
 # train-sampler
 train_sampler: "TrainingSampler"
 minority_classes: ['person', 'bird', 'cat', 'cow', 'dog', 'horse', 'sheep', 'aeroplane', 
-          'bicycle', 'boat', 'bus', 'car', 'motorbike', 'train', 'bottle', 'chair', 'dining table',
-          'potted plant', 'sofa', 'tv']
+          'bicycle', 'boat', 'bus', 'car', 'motorbike', 'train', 'bottle', 'chair', 'diningtable',
+          'pottedplant', 'sofa', 'tvmonitor']
 repeat_factor_smallest_class: 1.0
 
 # evaluation-parameters

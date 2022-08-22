@@ -1,1 +1,1 @@
-train_size,mAP,mAP-person,mAP-bird,mAP-cat,mAP-cow,mAP-dog,mAP-horse,mAP-sheep,mAP-aeroplane,mAP-bicycle,mAP-boat,mAP-bus,mAP-car,mAP-motorbike,mAP-train,mAP-bottle,mAP-chair,mAP-dining table,mAP-potted plant,mAP-sofa,mAP-monitor
+train_size,mAP,mAP-person,mAP-bird,mAP-cat,mAP-cow,mAP-dog,mAP-horse,mAP-sheep,mAP-aeroplane,mAP-bicycle,mAP-boat,mAP-bus,mAP-car,mAP-motorbike,mAP-train,mAP-bottle,mAP-chair,mAP-diningtable,mAP-pottedplant,mAP-sofa,mAP-tv,mAP-tvmonitor,mAP-monitor

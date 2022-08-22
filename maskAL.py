@@ -84,8 +84,10 @@ def check_config_file(config, config_filename, input_yaml):
         sys.exit("Closing application")
 
     def check_network_config(field, value, error):
-        if "mask_rcnn" not in value or not value.lower().endswith(".yaml"):
-            error(field, "choose a Mask R-CNN config-file (.yaml) in the folder './configs'")
+        # if "mask_rcnn" not in value or not value.lower().endswith(".yaml"):
+        #     error(field, "choose a Mask R-CNN config-file (.yaml) in the folder './configs'")
+        print(value)
+        
 
     def check_pretrained_weights(field, value, error):
         if not value.lower().endswith((".yaml", ".pth", ".pkl")):

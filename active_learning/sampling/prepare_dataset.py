@@ -390,11 +390,9 @@ def process_cvat_xml(xmlfile, classnames):
     if isinstance(data['annotation']['object'], list):
         for q in range(len(data['annotation']['object'])):
             obj = data['annotation']['object'][q]
-
-            if obj['parts']['ispartof'] is not None:
-                group_ids.append(int(obj['parts']['ispartof']))
-            else:
-                group_ids.append(int(obj['id']))
+            classname = obj['name']
+            obj_index = classnames.index(classname)
+            group_ids.append(obj_index)
 
     ## if 'object' is a dict, then it only has 1 mask  
     if isinstance(data['annotation']['object'], dict):
@@ -403,47 +401,38 @@ def process_cvat_xml(xmlfile, classnames):
         obj_index = classnames.index(classname)
         group_ids.append(obj_index)            
             
-    unique_group_ids = list(set(group_ids))
-    unique_group_ids.sort()
-    total_masks = len(unique_group_ids)        
+    # total_masks = len(unique_group_ids)
+    total_bbox = len(group_ids)        
 
     category_ids = []
-    masks = []
+    bboxes = []
     crowd_ids = []
 
-    for i in range(total_masks):
+    for i in range(total_bbox):
         category_ids.append([])
-        masks.append([])
+        bboxes.append([])
         crowd_ids.append([])
 
     ## if 'object' is a list, then there are multiple masks
     if isinstance(data['annotation']['object'], list):
         for p in range(len(data['annotation']['object'])):
             obj = data['annotation']['object'][p]
-            fid = group_ids[p]
-            fill_id = unique_group_ids.index(fid)
             classname = obj['name']
 
             try:
                 category_id = int(np.where(np.asarray(classnames) == classname)[0][0] + 1)
-                category_ids[fill_id] = category_id
+                category_ids[p] = category_id
                 run_further = True
             except:
                 print("Cannot find the class name (please check the annotation files)")
                 run_further = False
 
             if run_further:
-                if 'polygon' in obj:
-                    if 'pt' in obj['polygon']:
-                        points = []
-                        path_points = obj['polygon']['pt']
-                        for h in range(len(path_points)):
-                            points.append(float(path_points[h]['x']))
-                            points.append(float(path_points[h]['y']))
+                if 'bndbox' in obj:
+                    for key in obj['bndbox']:
+                        bboxes[p].append(obj['bndbox'][key])
 
-                        masks[fill_id].append(points)
-
-                crowd_ids[fill_id] = 0
+                crowd_ids[p] = 0
                 status = "successful"
             else:
                 status = "unsuccessful"
@@ -463,22 +452,16 @@ def process_cvat_xml(xmlfile, classnames):
             run_further = False
 
         if run_further:
-            if 'polygon' in obj:
-                if 'pt' in obj['polygon']:
-                    points = []
-                    path_points = obj['polygon']['pt']
-                    for h in range(len(path_points)):
-                        points.append(float(path_points[h]['x']))
-                        points.append(float(path_points[h]['y']))
-
-                    masks[fill_id].append(points)
+            if 'bndbox' in obj:
+                for key in obj['bndbox']:
+                    bboxes[fill_id].append(obj['bndbox'][key])
 
             crowd_ids[fill_id] = 0
             status = "successful"
         else:
             status = "unsuccessful"
 
-    return category_ids, masks, crowd_ids, status
+    return category_ids, bboxes, crowd_ids, status
 
 
 def mkdir_supervisely(img_dir, write_dir, supervisely_meta_json):
@@ -583,21 +566,17 @@ def process_supervisely_json(jsonfile, classnames):
     return category_ids, masks, crowd_ids, status
 
 
-def bounding_box(masks):
+def bounding_box(bboxes):
     areas = []
     boxes = []
 
-    for _ in range(len(masks)):
+    for _ in range(len(bboxes)):
         areas.append([])
         boxes.append([])
 
 
-    for i in range(len(masks)):
-        points = masks[i]
-        all_points = np.concatenate(points)
-
-        pts = np.asarray(all_points).astype(np.float32).reshape(-1,1,2)
-        bbx,bby,bbw,bbh = cv2.boundingRect(pts)
+    for i in range(len(bboxes)):
+        bbx,bby,bbw,bbh = int(bboxes[i][0]), int(bboxes[i][1]), int(bboxes[i][2])-int(bboxes[i][0]), int(bboxes[i][3])-int(bboxes[i][1])
 
         area = bbw*bbh 
         areas[i] = area                      
@@ -835,21 +814,21 @@ def create_json(rootdir, imgdir, images, classes, name):
                     continue
 
         # check if there are classnames that are not in voc2007
-        if file_is_json:    
-            flag = 0
-            i = -1
-            while (True):
-                i += 1
-                if len(data['shapes']) > 0 and i < len(data['shapes']):
-                    if data['shapes'][i]['label'] not in classes:
-                        data['shapes'].remove(data['shapes'][i])
-                        flag = 1
-                        i = i - 1
-                if i == len(data['shapes']):
-                    break
-            if flag == 1:
-                with open(annot_filename, 'w') as updatefile:
-                    json.dump(data, updatefile)
+        # if file_is_json:    
+        #     flag = 0
+        #     i = -1
+        #     while (True):
+        #         i += 1
+        #         if len(data['shapes']) > 0 and i < len(data['shapes']):
+        #             if data['shapes'][i]['label'] not in classes:
+        #                 data['shapes'].remove(data['shapes'][i])
+        #                 flag = 1
+        #                 i = i - 1
+        #         if i == len(data['shapes']):
+        #             break
+        #     if flag == 1:
+        #         with open(annot_filename, 'w') as updatefile:
+        #             json.dump(data, updatefile)
 
         if file_is_xml:
             with open(annot_filename) as xml_file:
@@ -884,18 +863,16 @@ def create_json(rootdir, imgdir, images, classes, name):
                 category_ids, masks, crowd_ids, status = process_darwin_json(annot_filename, classes)
 
             if annot_format == 'cvat':
-                category_ids, masks, crowd_ids, status = process_cvat_xml(annot_filename, classes)
+                category_ids, boxes, crowd_ids, status = process_cvat_xml(annot_filename, classes)
 
             if annot_format == 'supervisely':
                 category_ids, masks, crowd_ids, status = process_supervisely_json(annot_filename, classes)
 
             if status == 'successful':
-                areas, boxes = bounding_box(masks)
-                img_vis = visualize_annotations(img, category_ids, masks, boxes, classes)
+                areas, boxes = bounding_box(boxes)
 
                 for q in range(len(category_ids)):
                     category_id = category_ids[q]
-                    mask = masks[q]
                     bb_area = areas[q]
                     bbpoints = boxes[q]
                     crowd_id = crowd_ids[q]
@@ -904,7 +881,6 @@ def create_json(rootdir, imgdir, images, classes, name):
                             'id': annotation_id,
                             'image_id': j,
                             'category_id': category_id,
-                            'segmentation': mask,
                             'area': bb_area,
                             'bbox': bbpoints,
                             'iscrowd': crowd_id
