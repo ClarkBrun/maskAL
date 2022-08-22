@@ -15,10 +15,15 @@ __all__ = ["load_voc_instances", "register_pascal_voc"]
 
 # fmt: off
 CLASS_NAMES = (
-    "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat",
-    "chair", "cow", "diningtable", "dog", "horse", "motorbike", "person",
-    "pottedplant", "sheep", "sofa", "train", "tvmonitor"
+    'person', 'bird', 'cat', 'cow', 'dog', 'horse', 'sheep', 'aeroplane', 
+    'bicycle', 'boat', 'bus', 'car', 'motorbike', 'train', 'bottle', 'chair', 'diningtable',
+    'pottedplant', 'sofa', 'tvmonitor'
 )
+# CLASS_NAMES = (
+#     "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat",
+#     "chair", "cow", "diningtable", "dog", "horse", "motorbike", "person",
+#     "pottedplant", "sheep", "sofa", "train", "tvmonitor"
+# )
 # fmt: on
 
 
@@ -76,6 +81,10 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
 
 
 def register_pascal_voc(name, dirname, split, year, class_names=CLASS_NAMES):
+    dataset_name = name
+    if dataset_name in DatasetCatalog.list():
+        DatasetCatalog.remove(dataset_name)
+
     DatasetCatalog.register(name, lambda: load_voc_instances(dirname, split, class_names))
     MetadataCatalog.get(name).set(
         thing_classes=list(class_names), dirname=dirname, year=year, split=split

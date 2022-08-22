@@ -35,9 +35,9 @@ from detectron2.engine import DefaultPredictor
 from detectron2.config import get_cfg
 from detectron2.utils.visualizer import Visualizer
 from detectron2.data import DatasetCatalog, MetadataCatalog, build_detection_test_loader
-from detectron2.data.datasets import register_coco_instances
+from detectron2.data.datasets import register_coco_instances, register_pascal_voc
 from detectron2.engine import DefaultTrainer
-from detectron2.evaluation import COCOEvaluator, inference_on_dataset
+from detectron2.evaluation import COCOEvaluator, inference_on_dataset, PascalVOCDetectionEvaluator
 from detectron2.modeling import build_model
 from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.engine.hooks import HookBase
@@ -360,7 +360,7 @@ def Train_MaskRCNN(config, weightsfolder, gpu_num, iter, val_value, dropout_prob
         def build_evaluator(cls, cfg, dataset_name, output_folder=None):
             if output_folder is None:
                 output_folder = os.path.join(cfg.OUTPUT_DIR, "inference")
-            return COCOEvaluator(dataset_name, ("bbox", "segm"), False, output_folder)
+            return PascalVOCDetectionEvaluator(dataset_name, ("bbox"), False, output_folder)
 
         def build_hooks(self):
             hooks = super().build_hooks()
@@ -369,33 +369,31 @@ def Train_MaskRCNN(config, weightsfolder, gpu_num, iter, val_value, dropout_prob
 
 
     if init:
-        register_coco_instances("train", {}, os.path.join(config['dataroot'], "train.json"), config['traindir'])
-        train_metadata = MetadataCatalog.get("train")
-        dataset_dicts_train = DatasetCatalog.get("train")
+        register_pascal_voc("VOC2007",'C:\\Users\\TaoZ\\Desktop\\VOC2007','train',2007)
+        train_metadata = MetadataCatalog.get("voc_2007_train")
+        dataset_dicts_train = DatasetCatalog.get("voc_2007_train")
 
-        register_coco_instances("val", {}, os.path.join(config['dataroot'], "val.json"), config['valdir'])
-        val_metadata = MetadataCatalog.get("val")
-        dataset_dicts_val = DatasetCatalog.get("val")
+        # register_pascal_voc("VOC2007",'C:\\Users\\TaoZ\\Desktop\\VOC2007','val',2007)
+        # val_metadata = MetadataCatalog.get("voc_2007_val")
+        # dataset_dicts_val = DatasetCatalog.get("voc_2007_val")
     else:
         DatasetCatalog.remove("train")
-        register_coco_instances("train", {}, os.path.join(config['dataroot'], "train.json"), config['traindir'])
-        train_metadata = MetadataCatalog.get("train")
-        dataset_dicts_train = DatasetCatalog.get("train")
+        register_pascal_voc("VOC2007",'C:\\Users\\TaoZ\\Desktop\\VOC2007','train',2007)
+        train_metadata = MetadataCatalog.get("voc_2007_train")
+        dataset_dicts_train = DatasetCatalog.get("voc_2007_train")
 
 
     ## add dropout layers to the architecture of Mask R-CNN
     cfg = get_cfg()
     cfg.merge_from_file(model_zoo.get_config_file(config['network_config']))
     cfg.MODEL.ROI_BOX_HEAD.DROPOUT_PROBABILITY = dropout_probability
-    cfg.MODEL.ROI_MASK_HEAD.DROPOUT_PROBABILITY = dropout_probability
 
     if any(x in config['network_config'] for x in ["FPN", "DC5"]):
         cfg.MODEL.ROI_BOX_HEAD.NAME = 'FastRCNNConvFCHeadDropout'
         cfg.MODEL.ROI_HEADS.NAME = 'StandardROIHeadsDropout'
     elif any(x in config['network_config'] for x in ["C4"]):
         cfg.MODEL.ROI_HEADS.NAME = 'Res5ROIHeadsDropout'
-        
-    cfg.MODEL.ROI_MASK_HEAD.NAME = 'MaskRCNNConvUpsampleHeadDropout'
+    
     cfg.MODEL.ROI_HEADS.SOFTMAXES = False
     cfg.OUTPUT_DIR = weightsfolder
 
@@ -428,8 +426,8 @@ def Train_MaskRCNN(config, weightsfolder, gpu_num, iter, val_value, dropout_prob
     max_iterations, steps = calculate_iterations(config, dataset_dicts_train)
 
     ## initialize the training parameters  
-    cfg.DATASETS.TRAIN = ("train",)
-    cfg.DATASETS.TEST = ("val",)
+    cfg.DATASETS.TRAIN = ("voc_2007_train",)
+    cfg.DATASETS.TEST = ("voc_2007_val",)
     cfg.NUM_GPUS = gpu_num
     cfg.DATALOADER.NUM_WORKERS = config['num_workers']
     cfg.SOLVER.IMS_PER_BATCH = config['train_batch_size']
@@ -465,9 +463,9 @@ def Train_MaskRCNN(config, weightsfolder, gpu_num, iter, val_value, dropout_prob
 
 def Eval_MaskRCNN(cfg, config, dataset_dicts_train, weightsfolder, resultsfolder, csv_name, iter, init=False):      
     if init:
-        register_coco_instances("test", {}, os.path.join(config['dataroot'], "test.json"), config['testdir'])
-        test_metadata = MetadataCatalog.get("test")
-        dataset_dicts_test = DatasetCatalog.get("test")
+        register_pascal_voc("VOC2007",'C:\\Users\\TaoZ\\Desktop\\VOC2007','test',2007)
+        train_metadata = MetadataCatalog.get("test")
+        dataset_dicts_train = DatasetCatalog.get("test")
 
     cfg.OUTPUT_DIR = weightsfolder
 
@@ -485,18 +483,18 @@ def Eval_MaskRCNN(cfg, config, dataset_dicts_train, weightsfolder, resultsfolder
     checkpointer.load(cfg.MODEL.WEIGHTS)
 
     predictor = DefaultPredictor(cfg)
-    evaluator = COCOEvaluator("test", ("bbox", "segm"), False, output_dir=resultsfolder)
+    evaluator = PascalVOCDetectionEvaluator("test", ("bbox"), False, output_dir=resultsfolder)
     val_loader = build_detection_test_loader(cfg, "test")
     eval_results = inference_on_dataset(model, val_loader, evaluator)
     
     segm_strings = [c.replace(c, 'AP-' + c) for c in config['classes']]
 
     if len(config['classes']) == 1:
-        segm_values = [round(eval_results['segm']['AP'], 1) for s in segm_strings]
+        segm_values = [round(eval_results['bbox']['AP'], 1) for s in segm_strings]
     else:
-        segm_values = [round(eval_results['segm'][s], 1) for s in segm_strings]
+        segm_values = [round(eval_results['bbox'][s], 1) for s in segm_strings]
 
-    write_values = [len(dataset_dicts_train), round(eval_results['segm']['AP'], 1)] + segm_values
+    write_values = [len(dataset_dicts_train), round(eval_results['bbox']['AP'], 1)] + segm_values
 
     with open(os.path.join(resultsfolder, csv_name), 'a', newline='') as csvfile:
         csvwriter = csv.writer(csvfile, delimiter=',',quotechar='|', quoting=csv.QUOTE_MINIMAL)
